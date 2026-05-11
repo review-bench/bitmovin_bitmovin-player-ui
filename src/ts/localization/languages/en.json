@@ -91,5 +91,6 @@
   "contextMenu.copySource": "Copy source",
   "contextMenu.copyConfig": "Copy player config",
   "contextMenu.copyDebugInfo": "Copy debug info",
+  "contextMenu.copyTimestampLink": "Copy link at current time",
   "contextMenu.copied": "Copied!"
 }

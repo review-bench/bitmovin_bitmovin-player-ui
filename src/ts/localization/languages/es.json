@@ -80,5 +80,6 @@
   "seekBar.timeshift": "cambio de posición",
   "seekBar.durationText": "de",
   "quickseek.forward": "Adelantar {seekSeconds} segundos",
-  "quickseek.rewind": "Rebobinar {seekSeconds} segundos"
+  "quickseek.rewind": "Rebobinar {seekSeconds} segundos",
+  "contextMenu.copyTimestampLink": "Copy link at current time"
 }

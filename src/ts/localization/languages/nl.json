@@ -80,5 +80,6 @@
   "seekBar.timeshift": "Tijdverschuiving",
   "seekBar.durationText": "van",
   "quickseek.forward": "{seekSeconds} seconden vooruitspoelen",
-  "quickseek.rewind": "{seekSeconds} seconden terugspoelen"
+  "quickseek.rewind": "{seekSeconds} seconden terugspoelen",
+  "contextMenu.copyTimestampLink": "Copy link at current time"
 }

@@ -36,6 +36,7 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
   private playerVersionElement: DOM;
   private toggleButtonElement: DOM;
   private copyDebugInfoButtonElement: DOM;
+  private copyTimestampButtonElement: DOM;
   private copySourceButtonElement: DOM;
   private copyConfigButtonElement: DOM;
 
@@ -101,6 +102,7 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
 
     this.toggleButtonElement = actionButton();
     this.copyDebugInfoButtonElement = actionButton();
+    this.copyTimestampButtonElement = actionButton();
     this.copySourceButtonElement = actionButton();
     this.copyConfigButtonElement = actionButton();
 
@@ -114,6 +116,7 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     element.append(separator);
     element.append(this.toggleButtonElement);
     element.append(this.copyDebugInfoButtonElement);
+    element.append(this.copyTimestampButtonElement);
     element.append(this.copySourceButtonElement);
     element.append(this.copyConfigButtonElement);
 
@@ -130,6 +133,7 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     this.subtitleElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.subtitle')));
     this.aboutLinkElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.about')));
     this.copyDebugInfoButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyDebugInfo')));
+    this.copyTimestampButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyTimestampLink')));
     this.copySourceButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copySource')));
     this.copyConfigButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyConfig')));
     // The toggle button label reflects the current `DebugInfoOverlay` state and is kept
@@ -191,6 +195,17 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     wireCopyButton(this.copyDebugInfoButtonElement, debugInfoLabel, () => buildDebugInfo(player));
     wireCopyButton(this.copySourceButtonElement, sourceLabel, () => player.getSource());
     wireCopyButton(this.copyConfigButtonElement, configLabel, () => player.getConfig());
+
+    const timestampLabel = i18n.getLocalizer('contextMenu.copyTimestampLink');
+    this.copyTimestampButtonElement.on('click', (e: MouseEvent) => {
+      e.stopPropagation();
+      copyToClipboard(buildTimestampLink(player.getCurrentTime()));
+      this.copyTimestampButtonElement.html(i18n.performLocalization(copiedLabel));
+      window.setTimeout(
+        () => this.copyTimestampButtonElement.html(i18n.performLocalization(timestampLabel)),
+        1200,
+      );
+    });
 
     const debugOverlay = this.config.debugInfoOverlay;
     if (debugOverlay) {
@@ -304,6 +319,39 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
       host.appendChild(rootEl);
     }
   }
+}
+
+/**
+ * Parses a `t=<seconds>[s]` parameter out of a URL (query string or fragment).
+ * Accepts plain numbers and the YouTube-style trailing-`s` form. Returns null when no
+ * valid value is present. Plain string parsing for compatibility with the oldest TV /
+ * STB / console browsers.
+ */
+export function parseTimestampFromUrl(href: string = window.location.href): number | null {
+  const m = href.match(/[?#&]t=([0-9]+(?:\.[0-9]+)?)s?(?:&|$|#)/);
+  if (!m) return null;
+  const value = parseFloat(m[1]);
+  return isFinite(value) && value >= 0 ? value : null;
+}
+
+/**
+ * Builds a deep-link to the current page with `?t=<seconds>s` appended (or replacing an
+ * existing `t=` value), preserving any other existing query params and the URL fragment.
+ * Plain string manipulation rather than the `URL` constructor for compatibility with
+ * older smart-TV / set-top-box browsers.
+ */
+export function buildTimestampLink(currentTime: number, href: string = window.location.href): string {
+  const t = Math.max(0, Math.floor(currentTime || 0));
+  const hashIndex = href.indexOf('#');
+  const fragment = hashIndex >= 0 ? href.substring(hashIndex) : '';
+  const beforeFragment = hashIndex >= 0 ? href.substring(0, hashIndex) : href;
+  const stripped = beforeFragment.replace(/([?&])t=[^&]*(&|$)/, (_, before: string, after: string) => {
+    if (before === '?' && after === '') return '';
+    if (before === '?' && after === '&') return '?';
+    return after === '&' ? before : '';
+  });
+  const sep = stripped.indexOf('?') === -1 ? '?' : '&';
+  return stripped + sep + 't=' + t + 's' + fragment;
 }
 
 /**
