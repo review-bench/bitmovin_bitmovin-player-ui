@@ -207,6 +207,17 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
       );
     });
 
+    // The deep-link consumer skips the seek on live streams, so a "Copy link at current
+    // time" action would produce a URL that does nothing on the other end. Reflect that
+    // by hiding the button whenever the loaded source is live, and re-show it on VOD.
+    const refreshTimestampButtonVisibility = () => {
+      this.copyTimestampButtonElement.css('display', player.isLive() ? 'none' : '');
+    };
+    player.on(player.exports.PlayerEvent.SourceLoaded, refreshTimestampButtonVisibility);
+    player.on(player.exports.PlayerEvent.SourceUnloaded, refreshTimestampButtonVisibility);
+    player.on(player.exports.PlayerEvent.Ready, refreshTimestampButtonVisibility);
+    refreshTimestampButtonVisibility();
+
     const debugOverlay = this.config.debugInfoOverlay;
     if (debugOverlay) {
       const showLabel = i18n.getLocalizer('videoStats.show');
