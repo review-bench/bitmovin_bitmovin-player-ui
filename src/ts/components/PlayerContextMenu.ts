@@ -2,12 +2,17 @@ import { Container, ContainerConfig } from './Container';
 import { DOM } from '../DOM';
 import { UIInstanceManager } from '../UIManager';
 import { PlayerAPI } from 'bitmovin-player';
-import { DebugInfoOverlay, parseCodecColor } from './overlays/DebugInfoOverlay';
+import { DebugInfoOverlay } from './overlays/DebugInfoOverlay';
 import { i18n } from '../localization/i18n';
+import { version as UI_VERSION_RAW } from '../main';
+import { SettingsPanelItem, SettingsPanelItemConfig } from './settings/SettingsPanelItem';
+import { SettingsPanel, SettingsPanelConfig } from './settings/SettingsPanel';
+import { Label, LabelConfig } from './labels/Label';
+import { Button, ButtonConfig, ButtonStyle } from './buttons/Button';
 
-// Webpack's `string-replace-loader` substitutes {{VERSION}} with a JSON-stringified
-// value (i.e. surrounded by quotes), so peel the outer quotes back off for display.
-const UI_VERSION: string = '{{VERSION}}'.replace(/^"|"$/g, '');
+// `version` in `main.ts` carries the JSON-stringified package version (i.e. surrounded
+// by quotes from the build-time replacement). Peel them off for display.
+const UI_VERSION: string = UI_VERSION_RAW.replace(/^"|"$/g, '');
 
 /**
  * Configuration interface for the {@link PlayerContextMenu}.
@@ -32,18 +37,16 @@ export interface PlayerContextMenuConfig extends ContainerConfig {
 export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
   private headerElement: DOM;
   private subtitleElement: DOM;
-  private aboutLinkElement: DOM;
   private playerVersionElement: DOM;
-  private toggleButtonElement: DOM;
-  private copyDebugInfoButtonElement: DOM;
-  private copyTimestampButtonElement: DOM;
-  private copySourceButtonElement: DOM;
-  private copyConfigButtonElement: DOM;
+  private toggleButton: Button<ButtonConfig>;
+  private copyDebugInfoButton: Button<ButtonConfig>;
+  private copyTimestampButton: Button<ButtonConfig>;
+  private copySourceButton: Button<ButtonConfig>;
+  private copyConfigButton: Button<ButtonConfig>;
 
   private uiContextMenuHandler: ((e: MouseEvent) => void) | null = null;
-  private documentMouseDownHandler: ((e: MouseEvent) => void) | null = null;
-  private documentContextMenuHandler: ((e: MouseEvent) => void) | null = null;
   private documentKeyDownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private documentScrollDismissHandler: ((e: Event) => void) | null = null;
   private uiContainerElement: HTMLElement | null = null;
   private playerContainerElement: HTMLElement | null = null;
   private debugOverlayLabelHandler: (() => void) | null = null;
@@ -81,30 +84,23 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
       class: this.prefixCss('ui-player-context-menu-info'),
     }).html(`UI: ${UI_VERSION}`);
 
-    this.aboutLinkElement = new DOM('a', {
-      class: this.prefixCss('ui-player-context-menu-link'),
-      href: 'https://bitmovin.com',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    });
-    this.aboutLinkElement.on('click', (e: MouseEvent) => e.stopPropagation());
-
     const separator = new DOM('div', {
       class: this.prefixCss('ui-player-context-menu-separator'),
     });
 
     const actionButton = () =>
-      new DOM('button', {
-        type: 'button',
-        class: this.prefixCss('ui-player-context-menu-button'),
+      new Button<ButtonConfig>({
+        cssClass: 'ui-player-context-menu-button',
         role: 'menuitem',
+        buttonStyle: ButtonStyle.Text,
+        text: '',
       });
 
-    this.toggleButtonElement = actionButton();
-    this.copyDebugInfoButtonElement = actionButton();
-    this.copyTimestampButtonElement = actionButton();
-    this.copySourceButtonElement = actionButton();
-    this.copyConfigButtonElement = actionButton();
+    this.toggleButton = actionButton();
+    this.copyDebugInfoButton = actionButton();
+    this.copyTimestampButton = actionButton();
+    this.copySourceButton = actionButton();
+    this.copyConfigButton = actionButton();
 
     this.refreshLocalizedText();
 
@@ -112,13 +108,12 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     element.append(this.subtitleElement);
     element.append(this.playerVersionElement);
     element.append(uiVersionElement);
-    element.append(this.aboutLinkElement);
     element.append(separator);
-    element.append(this.toggleButtonElement);
-    element.append(this.copyDebugInfoButtonElement);
-    element.append(this.copyTimestampButtonElement);
-    element.append(this.copySourceButtonElement);
-    element.append(this.copyConfigButtonElement);
+    element.append(this.toggleButton.getDomElement());
+    element.append(this.copyDebugInfoButton.getDomElement());
+    element.append(this.copyTimestampButton.getDomElement());
+    element.append(this.copySourceButton.getDomElement());
+    element.append(this.copyConfigButton.getDomElement());
 
     return element;
   }
@@ -131,19 +126,17 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
   private refreshLocalizedText(): void {
     this.headerElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.title')));
     this.subtitleElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.subtitle')));
-    this.aboutLinkElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.about')));
-    this.copyDebugInfoButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyDebugInfo')));
-    this.copyTimestampButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyTimestampLink')));
-    this.copySourceButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copySource')));
-    this.copyConfigButtonElement?.html(i18n.performLocalization(i18n.getLocalizer('contextMenu.copyConfig')));
+    this.copyDebugInfoButton?.setText(i18n.getLocalizer('contextMenu.copyDebugInfo'));
+    this.copyTimestampButton?.setText(i18n.getLocalizer('contextMenu.copyTimestampLink'));
+    this.copySourceButton?.setText(i18n.getLocalizer('contextMenu.copySource'));
+    this.copyConfigButton?.setText(i18n.getLocalizer('contextMenu.copyConfig'));
     // The toggle button label reflects the current `DebugInfoOverlay` state and is kept
     // in sync by the `updateLabel` handler in `configure()`; nothing to do here.
     const debugOverlay = this.config.debugInfoOverlay;
-    if (this.toggleButtonElement) {
+    if (this.toggleButton) {
       const showLabel = i18n.getLocalizer('videoStats.show');
       const hideLabel = i18n.getLocalizer('videoStats.hide');
-      const localizer = debugOverlay?.isShown() ? hideLabel : showLabel;
-      this.toggleButtonElement.html(i18n.performLocalization(localizer));
+      this.toggleButton.setText(debugOverlay?.isShown() ? hideLabel : showLabel);
     }
   }
 
@@ -166,52 +159,53 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     };
     uiContainerEl.addEventListener('contextmenu', this.uiContextMenuHandler);
 
-    const dismissIfOutside = (e: MouseEvent) => {
-      if (!this.isShown()) return;
-      if (rootEl.contains(e.target as Node)) return;
-      this.hide();
-    };
-    this.documentMouseDownHandler = dismissIfOutside;
-    this.documentContextMenuHandler = dismissIfOutside;
+    // Outside-click dismissal is handled by the sibling `DismissClickOverlay` that the
+    // UIFactory wires up against this menu; only Escape + scroll need direct hookup.
     this.documentKeyDownHandler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && this.isShown()) this.hide();
     };
-    document.addEventListener('mousedown', this.documentMouseDownHandler, true);
-    document.addEventListener('contextmenu', this.documentContextMenuHandler, true);
+    // Hide as soon as the user starts scrolling — `position: fixed` keeps the menu glued
+    // to the viewport, which looks broken once the page moves underneath it. Use `wheel`
+    // and `touchmove` (both bubble) rather than `scroll` (doesn't bubble; a window-level
+    // capture listener misses scrolls that happen inside nested scroll containers).
+    this.documentScrollDismissHandler = () => {
+      if (this.isShown()) this.hide();
+    };
     document.addEventListener('keydown', this.documentKeyDownHandler);
+    document.addEventListener('wheel', this.documentScrollDismissHandler, { capture: true, passive: true });
+    document.addEventListener('touchmove', this.documentScrollDismissHandler, { capture: true, passive: true });
 
     const copiedLabel = i18n.getLocalizer('contextMenu.copied');
     const sourceLabel = i18n.getLocalizer('contextMenu.copySource');
     const configLabel = i18n.getLocalizer('contextMenu.copyConfig');
     const debugInfoLabel = i18n.getLocalizer('contextMenu.copyDebugInfo');
-    const wireCopyButton = (button: DOM, label: ReturnType<typeof i18n.getLocalizer>, getValue: () => unknown) => {
-      button.on('click', (e: MouseEvent) => {
-        e.stopPropagation();
+    const wireCopyButton = (
+      button: Button<ButtonConfig>,
+      label: ReturnType<typeof i18n.getLocalizer>,
+      getValue: () => unknown,
+    ) => {
+      button.onClick.subscribe(() => {
         copyToClipboard(JSON.stringify(getValue() ?? null, jsonReplacer, 2));
-        button.html(i18n.performLocalization(copiedLabel));
-        window.setTimeout(() => button.html(i18n.performLocalization(label)), 1200);
+        button.setText(copiedLabel);
+        window.setTimeout(() => button.setText(label), 1200);
       });
     };
-    wireCopyButton(this.copyDebugInfoButtonElement, debugInfoLabel, () => buildDebugInfo(player));
-    wireCopyButton(this.copySourceButtonElement, sourceLabel, () => player.getSource());
-    wireCopyButton(this.copyConfigButtonElement, configLabel, () => player.getConfig());
+    wireCopyButton(this.copyDebugInfoButton, debugInfoLabel, () => buildDebugInfo(player));
+    wireCopyButton(this.copySourceButton, sourceLabel, () => player.getSource());
+    wireCopyButton(this.copyConfigButton, configLabel, () => player.getConfig());
 
     const timestampLabel = i18n.getLocalizer('contextMenu.copyTimestampLink');
-    this.copyTimestampButtonElement.on('click', (e: MouseEvent) => {
-      e.stopPropagation();
+    this.copyTimestampButton.onClick.subscribe(() => {
       copyToClipboard(buildTimestampLink(player.getCurrentTime()));
-      this.copyTimestampButtonElement.html(i18n.performLocalization(copiedLabel));
-      window.setTimeout(
-        () => this.copyTimestampButtonElement.html(i18n.performLocalization(timestampLabel)),
-        1200,
-      );
+      this.copyTimestampButton.setText(copiedLabel);
+      window.setTimeout(() => this.copyTimestampButton.setText(timestampLabel), 1200);
     });
 
     // The deep-link consumer skips the seek on live streams, so a "Copy link at current
     // time" action would produce a URL that does nothing on the other end. Reflect that
     // by hiding the button whenever the loaded source is live, and re-show it on VOD.
     const refreshTimestampButtonVisibility = () => {
-      this.copyTimestampButtonElement.css('display', player.isLive() ? 'none' : '');
+      this.copyTimestampButton.getDomElement().css('display', player.isLive() ? 'none' : '');
     };
     player.on(player.exports.PlayerEvent.SourceLoaded, refreshTimestampButtonVisibility);
     player.on(player.exports.PlayerEvent.SourceUnloaded, refreshTimestampButtonVisibility);
@@ -223,12 +217,10 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
       const showLabel = i18n.getLocalizer('videoStats.show');
       const hideLabel = i18n.getLocalizer('videoStats.hide');
       const updateLabel = () => {
-        const localizer = debugOverlay.isShown() ? hideLabel : showLabel;
-        this.toggleButtonElement.html(i18n.performLocalization(localizer));
+        this.toggleButton.setText(debugOverlay.isShown() ? hideLabel : showLabel);
       };
       this.debugOverlayLabelHandler = updateLabel;
-      this.toggleButtonElement.on('click', (e: MouseEvent) => {
-        e.stopPropagation();
+      this.toggleButton.onClick.subscribe(() => {
         debugOverlay.toggleHidden();
         updateLabel();
         this.hide();
@@ -237,7 +229,7 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
       debugOverlay.onHide.subscribe(updateLabel);
       updateLabel();
     } else {
-      this.toggleButtonElement.css('display', 'none');
+      this.toggleButton.getDomElement().css('display', 'none');
     }
   }
 
@@ -245,34 +237,64 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     if (this.uiContainerElement && this.uiContextMenuHandler) {
       this.uiContainerElement.removeEventListener('contextmenu', this.uiContextMenuHandler);
     }
-    if (this.documentMouseDownHandler) {
-      document.removeEventListener('mousedown', this.documentMouseDownHandler, true);
-    }
-    if (this.documentContextMenuHandler) {
-      document.removeEventListener('contextmenu', this.documentContextMenuHandler, true);
-    }
     if (this.documentKeyDownHandler) {
       document.removeEventListener('keydown', this.documentKeyDownHandler);
+    }
+    if (this.documentScrollDismissHandler) {
+      document.removeEventListener('wheel', this.documentScrollDismissHandler, {
+        capture: true,
+      } as EventListenerOptions);
+      document.removeEventListener('touchmove', this.documentScrollDismissHandler, {
+        capture: true,
+      } as EventListenerOptions);
     }
     const debugOverlay = this.config.debugInfoOverlay;
     if (debugOverlay && this.debugOverlayLabelHandler) {
       debugOverlay.onShow.unsubscribe(this.debugOverlayLabelHandler);
       debugOverlay.onHide.unsubscribe(this.debugOverlayLabelHandler);
     }
-    // If the menu was ever shown it lives on <body> now (not in the UI tree the
-    // UIManager owns), so the framework's tree teardown won't clean it up.
-    const rootEl = this.hasDomElement() ? (this.getDomElement().get(0) as HTMLElement) : null;
-    if (rootEl && rootEl.parentElement === document.body) {
-      document.body.removeChild(rootEl);
-    }
     this.uiContextMenuHandler = null;
-    this.documentMouseDownHandler = null;
-    this.documentContextMenuHandler = null;
     this.documentKeyDownHandler = null;
+    this.documentScrollDismissHandler = null;
     this.debugOverlayLabelHandler = null;
     this.uiContainerElement = null;
     this.playerContainerElement = null;
     super.release();
+  }
+
+  /**
+   * Returns a `SettingsPanelItem` that opens this context menu centered over the player.
+   * Use this on layouts where right-click isn't available (touch / TV remote / set-top
+   * box / game console) so the same actions can be reached via the settings panel.
+   *
+   * The item closes `parentSettingsPanel` before showing the menu.
+   */
+  public createSettingsPanelOpenerItem(
+    parentSettingsPanel: SettingsPanel<SettingsPanelConfig>,
+  ): SettingsPanelItem<SettingsPanelItemConfig> {
+    const label = new Label<LabelConfig>({ text: i18n.getLocalizer('settings.playerInfo') });
+    const item = new SettingsPanelItem({
+      label,
+      isSetting: false,
+      cssClasses: ['player-info-item'],
+      ariaLabel: i18n.getLocalizer('settings.playerInfo'),
+      role: 'menuitem',
+      tabIndex: 0,
+    });
+    const openMenu = () => {
+      parentSettingsPanel.hide();
+      this.showCentered();
+    };
+    const itemEl = item.getDomElement();
+    itemEl.css('cursor', 'pointer');
+    itemEl.on('click', openMenu);
+    itemEl.on('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openMenu();
+      }
+    });
+    return item;
   }
 
   /**
@@ -287,9 +309,6 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
     const rootEl = this.getDomElement().get(0) as HTMLElement;
-    // Pre-measure the menu so we can center it on the player rather than have its
-    // top-left at the player center.
-    this.reparentToOverlayHost(rootEl);
     const x = rect.left + rect.width / 2 - rootEl.offsetWidth / 2;
     const y = rect.top + rect.height / 2 - rootEl.offsetHeight / 2;
     this.showAt(x, y);
@@ -298,8 +317,6 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
   private showAt(clientX: number, clientY: number): void {
     const el = this.getDomElement();
     const rootEl = el.get(0) as HTMLElement;
-
-    this.reparentToOverlayHost(rootEl);
 
     // The element is still laid out while hidden (visibility: hidden, not display: none),
     // so offsetWidth/Height return the real dimensions.
@@ -313,22 +330,6 @@ export class PlayerContextMenu extends Container<PlayerContextMenuConfig> {
     });
 
     this.show();
-  }
-
-  /**
-   * Moves the menu into the topmost rendering context so it remains visible. Prefers the
-   * current native-fullscreen element (otherwise the menu would be invisible while the
-   * page is in fullscreen, since only the fullscreen element's subtree is painted),
-   * otherwise falls back to `<body>`.
-   */
-  private reparentToOverlayHost(rootEl: HTMLElement): void {
-    const host =
-      (document as Document & { fullscreenElement?: Element; webkitFullscreenElement?: Element }).fullscreenElement ||
-      (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
-      document.body;
-    if (rootEl.parentElement !== host) {
-      host.appendChild(rootEl);
-    }
   }
 }
 
@@ -369,21 +370,16 @@ export function buildTimestampLink(currentTime: number, href: string = window.lo
  * Builds a structured snapshot of the current playback state for the "Copy debug info"
  * action. Captures everything a Bitmovin support engineer would normally have to ask the
  * user to gather manually — player + UI version, source URL, current quality, buffer
- * levels, dropped frames, parsed color space, current time, page URL, user agent.
+ * levels, dropped frames, current time, page URL, user agent.
  */
 function buildDebugInfo(player: PlayerAPI): Record<string, unknown> {
-  const safe = <T>(fn: () => T): T | undefined => {
-    try {
-      return fn();
-    } catch {
-      return undefined;
-    }
-  };
-  const videoQuality = safe(() => player.getPlaybackVideoData());
-  const audioQuality = safe(() => player.getPlaybackAudioData());
-  const downloadedVideo = safe(() => player.getDownloadedVideoData());
-  const downloadedAudio = safe(() => player.getDownloadedAudioData());
-  const source = safe(() => player.getSource()) as
+  // Only the playback/downloaded-data getters can throw (on muxed HLS or before a source
+  // is loaded). Everything else is contractually safe per the PlayerAPI surface.
+  const videoQuality = tryGet(() => player.getPlaybackVideoData());
+  const audioQuality = tryGet(() => player.getPlaybackAudioData());
+  const downloadedVideo = tryGet(() => player.getDownloadedVideoData());
+  const downloadedAudio = tryGet(() => player.getDownloadedAudioData());
+  const source = player.getSource() as
     | {
         dash?: string;
         hls?: string;
@@ -392,16 +388,15 @@ function buildDebugInfo(player: PlayerAPI): Record<string, unknown> {
         drm?: Record<string, unknown>;
       }
     | undefined;
-  const color = videoQuality?.codec ? parseCodecColor(videoQuality.codec) : null;
   return {
     timestamp: new Date().toISOString(),
     pageUrl: window.location.href,
     userAgent: navigator.userAgent,
     player: {
       version: player.version,
-      type: safe(() => player.getPlayerType()),
-      streamType: safe(() => player.getStreamType()),
-      isLive: safe(() => player.isLive()),
+      type: player.getPlayerType(),
+      streamType: player.getStreamType(),
+      isLive: player.isLive(),
     },
     ui: { version: UI_VERSION },
     source: source
@@ -414,14 +409,14 @@ function buildDebugInfo(player: PlayerAPI): Record<string, unknown> {
         }
       : null,
     playback: {
-      currentTime: safe(() => player.getCurrentTime()),
-      duration: safe(() => player.getDuration()),
-      timeShift: safe(() => player.getTimeShift()),
-      maxTimeShift: safe(() => player.getMaxTimeShift()),
-      speed: safe(() => player.getPlaybackSpeed()),
-      videoBuffer: safe(() => player.getVideoBufferLength()),
-      audioBuffer: safe(() => player.getAudioBufferLength()),
-      droppedFrames: safe(() => player.getDroppedVideoFrames()),
+      currentTime: player.getCurrentTime(),
+      duration: player.getDuration(),
+      timeShift: player.getTimeShift(),
+      maxTimeShift: player.getMaxTimeShift(),
+      speed: player.getPlaybackSpeed(),
+      videoBuffer: player.getVideoBufferLength(),
+      audioBuffer: player.getAudioBufferLength(),
+      droppedFrames: player.getDroppedVideoFrames(),
     },
     quality: videoQuality
       ? {
@@ -431,7 +426,6 @@ function buildDebugInfo(player: PlayerAPI): Record<string, unknown> {
           frameRate: (videoQuality as { frameRate?: number }).frameRate,
           bitrate: videoQuality.bitrate,
           codec: videoQuality.codec,
-          color,
           downloadedBitrate: downloadedVideo?.bitrate,
         }
       : null,
@@ -439,33 +433,43 @@ function buildDebugInfo(player: PlayerAPI): Record<string, unknown> {
       ? { bitrate: audioQuality.bitrate, codec: audioQuality.codec, downloadedBitrate: downloadedAudio?.bitrate }
       : null,
     counts: {
-      videoQualities: safe(() => player.getAvailableVideoQualities()?.length),
-      audioTracks: safe(() => player.getAvailableAudio()?.length),
+      videoQualities: player.getAvailableVideoQualities()?.length,
+      audioTracks: player.getAvailableAudio()?.length,
     },
     availableCodecs: {
-      video: safe(() =>
-        Array.from(
-          new Set(
-            player
-              .getAvailableVideoQualities()
-              .map(q => q.codec)
-              .filter(Boolean),
-          ),
+      video: Array.from(
+        new Set(
+          player
+            .getAvailableVideoQualities()
+            .map(q => q.codec)
+            .filter(Boolean),
         ),
       ),
-      audio: safe(() => {
-        const getAudioQualities = (
-          player as PlayerAPI & {
-            getAvailableAudioQualities?: () => Array<{ codec?: string }>;
-          }
-        ).getAvailableAudioQualities;
-        if (!getAudioQualities) return [];
-        const qualities: Array<{ codec?: string }> = getAudioQualities.call(player) ?? [];
-        const codecs = qualities.map(q => q.codec).filter((c): c is string => Boolean(c));
-        return Array.from(new Set(codecs));
-      }),
+      audio: collectAvailableAudioCodecs(player),
     },
   };
+}
+
+function collectAvailableAudioCodecs(player: PlayerAPI): string[] {
+  // `getAvailableAudioQualities` isn't part of the public PlayerAPI surface on every
+  // build, so feature-detect rather than assume.
+  const getAudioQualities = (
+    player as PlayerAPI & {
+      getAvailableAudioQualities?: () => Array<{ codec?: string }>;
+    }
+  ).getAvailableAudioQualities;
+  if (!getAudioQualities) return [];
+  const qualities: Array<{ codec?: string }> = getAudioQualities.call(player) ?? [];
+  const codecs = qualities.map(q => q.codec).filter((c): c is string => Boolean(c));
+  return Array.from(new Set(codecs));
+}
+
+function tryGet<T>(fn: () => T): T | undefined {
+  try {
+    return fn();
+  } catch {
+    return undefined;
+  }
 }
 
 export function copyToClipboard(text: string): void {
