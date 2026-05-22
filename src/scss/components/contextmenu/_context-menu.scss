@@ -27,3 +27,39 @@
 .#{$prefix}-ui-context-menu {
   @extend %ui-context-menu;
 }
+
+.#{$prefix}-ui-context-menu-item {
+  background-color: transparent;
+  border: 0;
+  box-sizing: border-box;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  height: auto;
+  min-width: 100%;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    background-color: transparentize($color-primary, 0.9);
+  }
+
+  &.#{$prefix}-ui-context-menu-item-noninteractive {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
+.#{$prefix}-ui-context-menu-separator {
+  background-color: transparentize($color-primary, 0.85);
+  height: 1px;
+
+  > .#{$prefix}-container-wrapper {
+    display: none;
+  }
+}

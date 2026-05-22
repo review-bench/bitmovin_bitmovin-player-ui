@@ -4,7 +4,8 @@ import { version as UI_VERSION } from '../../main';
 import { Label, LabelConfig } from '../labels/Label';
 import { UIInstanceManager } from '../../UIManager';
 import { ContextMenu, ContextMenuConfig } from './ContextMenu';
-import { Container, ContainerConfig } from '../Container';
+import { ContextMenuItem, ContextMenuItemConfig } from './ContextMenuItem';
+import { ContextMenuSeparator } from './ContextMenuSeparator';
 
 /**
  * Configuration interface for the {@link PlayerContextMenu}.
@@ -20,15 +21,21 @@ export interface PlayerContextMenuConfig extends ContextMenuConfig {}
  */
 export class PlayerContextMenu extends ContextMenu<PlayerContextMenuConfig> {
   constructor(config: PlayerContextMenuConfig = {}) {
+    const actionItems = config.components ?? [];
+
     super({
       ...config,
       cssClasses: ['ui-player-context-menu', ...(config.cssClasses ?? [])],
-      components: [new PlayerInfoContextMenuItem(), ...(config.components ?? [])],
+      components: [
+        new PlayerInfoContextMenuItem(),
+        ...(actionItems.length > 0 ? [new ContextMenuSeparator()] : []),
+        ...actionItems,
+      ],
     });
   }
 }
 
-class PlayerInfoContextMenuItem extends Container<ContainerConfig> {
+class PlayerInfoContextMenuItem extends ContextMenuItem<ContextMenuItemConfig> {
   private readonly playerVersionLabel: Label<LabelConfig>;
 
   constructor() {
@@ -54,7 +61,9 @@ class PlayerInfoContextMenuItem extends Container<ContainerConfig> {
         }),
       ],
       cssClasses: ['ui-player-context-menu-info-item'],
+      interactive: false,
       role: 'group',
+      tabIndex: -1,
     });
 
     this.playerVersionLabel = playerVersionLabel;
