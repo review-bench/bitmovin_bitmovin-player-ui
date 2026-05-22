@@ -1,0 +1,129 @@
+@import '../../variables';
+@import '../../mixins';
+
+%ui-floating-panel {
+  @extend %ui-container;
+
+  @include hidden-animated-with-additional-transitions(
+    $animation-duration,
+    (
+      height: (
+        0.35s,
+        cubic-bezier(0.4, 0, 0.2, 1),
+      ),
+      width: (
+        0.35s,
+        cubic-bezier(0.4, 0, 0.2, 1),
+      ),
+    )
+  );
+
+  $background-color: transparentize($color-background-menu, 0.15);
+
+  backdrop-filter: blur(10px);
+  background-color: $background-color;
+  border-radius: $border-radius;
+  box-shadow: 0 0 3px 0 transparentize($color: $color-black, $amount: 0.75);
+  color: $color-primary;
+  font-family: $font-family;
+  font-size: $font-size;
+  font-weight: $font-weight-medium;
+  height: fit-content;
+  max-height: calc(100% - 1em);
+  max-width: calc(100% - 1em);
+  min-width: 14em;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  z-index: 100;
+
+  &.#{$prefix}-hidden {
+    pointer-events: none;
+  }
+
+  > .#{$prefix}-container-wrapper {
+    max-height: inherit;
+    overflow-y: auto;
+  }
+
+  &.#{$prefix}-floating-panel-with-close-button {
+    > .#{$prefix}-container-wrapper {
+      padding-top: 2em;
+    }
+  }
+
+  .#{$prefix}-ui-floating-panel-close-button {
+    height: $icon-size * 0.75;
+    min-width: $icon-size * 0.75;
+    padding: 0.2em;
+    position: absolute;
+    right: 0.35em;
+    top: 0.35em;
+    z-index: 1;
+  }
+
+  .#{$prefix}-ui-floating-panel-item {
+    @include focusable(true, 0, 0);
+
+    min-height: $icon-size;
+    padding: 0.5em 1em;
+    white-space: nowrap;
+
+    > .#{$prefix}-container-wrapper {
+      align-items: center;
+      display: grid;
+      gap: 0.75em;
+      grid-template-columns: minmax(7em, 9em) minmax(0, 1fr);
+    }
+  }
+
+  .#{$prefix}-ui-floating-panel-item-leading-label {
+    color: transparentize($color-primary, 0.35);
+    justify-self: end;
+    line-height: $icon-size;
+    min-height: $icon-size;
+    text-align: right;
+  }
+
+  .#{$prefix}-ui-floating-panel-item-trailing-label {
+    color: $color-primary;
+    justify-self: start;
+    line-height: $icon-size;
+    min-height: $icon-size;
+    min-width: 0;
+    overflow-wrap: break-word;
+    text-align: left;
+    user-select: text;
+    white-space: normal;
+  }
+
+  &.#{$prefix}-floating-panel-placement-top-left {
+    left: safe-area-max(0.5em, left);
+    top: safe-area-max(0.5em, top);
+  }
+
+  &.#{$prefix}-floating-panel-placement-top-right {
+    right: safe-area-max(0.5em, right);
+    top: safe-area-max(0.5em, top);
+  }
+
+  &.#{$prefix}-floating-panel-placement-bottom-left {
+    bottom: safe-area-max(0.5em, bottom);
+    left: safe-area-max(0.5em, left);
+  }
+
+  &.#{$prefix}-floating-panel-placement-bottom-right {
+    bottom: safe-area-max(0.5em, bottom);
+    right: safe-area-max(0.5em, right);
+  }
+
+  &.#{$prefix}-floating-panel-placement-center {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.#{$prefix}-ui-floating-panel {
+  @extend %ui-floating-panel;
+}

@@ -12,6 +12,16 @@
   "settings.subtitles.background.color": "Achtergrondkleur",
   "settings.subtitles.background.opacity": "Achtergrond doorzichtigheid",
   "settings.subtitles.options": "Opties",
+  "playerInsights.title": "Player Insights",
+  "playerInsights.show": "Player Insights tonen",
+  "playerInsights.hide": "Player Insights verbergen",
+  "playerInsights.video": "Video",
+  "playerInsights.audio": "Audio",
+  "playerInsights.buffer": "Buffer",
+  "playerInsights.droppedFrames": "Dropped frames",
+  "playerInsights.time": "Tijd",
+  "playerInsights.stream": "Stream",
+  "playerInsights.player": "Player",
   "colors.white": "wit",
   "colors.black": "zwart",
   "colors.red": "rood",
@@ -81,5 +91,7 @@
   "seekBar.timeshift": "Tijdverschuiving",
   "seekBar.durationText": "van",
   "quickseek.forward": "{seekSeconds} seconden vooruitspoelen",
-  "quickseek.rewind": "{seekSeconds} seconden terugspoelen"
+  "quickseek.rewind": "{seekSeconds} seconden terugspoelen",
+  "contextMenu.title": "Bitmovin Player",
+  "contextMenu.subtitle": "Adaptive streaming voor het web"
 }

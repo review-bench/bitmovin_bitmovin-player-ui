@@ -1,0 +1,73 @@
+@import '../../variables';
+@import '../../mixins';
+
+.#{$prefix}-ui-player-insights-panel {
+  color: $color-primary;
+  font-size: $font-size-small;
+  line-height: 1.25;
+  width: 36em;
+
+  .#{$prefix}-ui-player-insights-panel-header {
+    align-items: center;
+    background-color: $color-background-menu-title-overlay;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 -0.45em 0.25em;
+    min-height: $icon-size * 0.95;
+    padding: 0.35em 2.8em 0.35em 0.95em;
+  }
+
+  .#{$prefix}-ui-player-insights-panel-title {
+    color: $color-primary;
+    font-size: $font-size-small;
+    font-weight: $font-weight-medium;
+    text-transform: uppercase;
+  }
+
+  > .#{$prefix}-container-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0.45em 0.55em;
+  }
+
+  &.#{$prefix}-floating-panel-with-close-button {
+    > .#{$prefix}-container-wrapper {
+      padding-top: 0;
+    }
+  }
+
+  .#{$prefix}-ui-floating-panel-close-button {
+    height: $icon-size * 0.55;
+    min-width: $icon-size * 0.55;
+    padding: 0.15em;
+    right: 0.75em;
+    top: 0.55em;
+
+    .#{$prefix}-ui-icon {
+      background-size: $icon-size * 0.55;
+      height: $icon-size * 0.55;
+      min-width: $icon-size * 0.55;
+    }
+  }
+
+  .#{$prefix}-ui-floating-panel-item {
+    min-height: $icon-size * 0.7;
+    padding: 0.2em 0.8em;
+
+    > .#{$prefix}-container-wrapper {
+      gap: 0.5em;
+      grid-template-columns: minmax(8.5em, 9em) minmax(0, 1fr);
+    }
+  }
+
+  .#{$prefix}-ui-floating-panel-item-leading-label {
+    line-height: $icon-size * 0.7;
+    min-height: $icon-size * 0.7;
+  }
+
+  .#{$prefix}-ui-floating-panel-item-trailing-label {
+    font-family: monospace;
+    line-height: $icon-size * 0.7;
+    min-height: $icon-size * 0.7;
+  }
+}

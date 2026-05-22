@@ -50,6 +50,16 @@ export interface Vocabulary {
   'settings.audio.volume': string;
   'settings.subtitles': string;
   'settings.subtitles.options': string;
+  'playerInsights.title': string;
+  'playerInsights.show': string;
+  'playerInsights.hide': string;
+  'playerInsights.video': string;
+  'playerInsights.audio': string;
+  'playerInsights.buffer': string;
+  'playerInsights.droppedFrames': string;
+  'playerInsights.time': string;
+  'playerInsights.stream': string;
+  'playerInsights.player': string;
   'settings.subtitles.font.color': string;
   'settings.subtitles.font.opacity': string;
   'settings.subtitles.background.color': string;

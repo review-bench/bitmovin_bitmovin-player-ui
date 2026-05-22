@@ -27,6 +27,7 @@ import { FullscreenToggleButton } from './components/buttons/FullscreenToggleBut
 import { UIContainer } from './components/UIContainer';
 import { BufferingOverlay } from './components/overlays/BufferingOverlay';
 import { PlayerContextMenu } from './components/contextmenu/PlayerContextMenu';
+import { ContextMenuItem, ContextMenuItemConfig } from './components/contextmenu/ContextMenuItem';
 import { PlaybackToggleOverlay } from './components/overlays/PlaybackToggleOverlay';
 import { CastStatusOverlay } from './components/overlays/CastStatusOverlay';
 import { TitleBar } from './components/TitleBar';
@@ -59,6 +60,7 @@ import { RecommendationOverlayNavigationGroup } from './spatialnavigation/Recomm
 import { SettingsPanelPageNavigationItem } from './components/settings/SettingsPanelPageNavigationItem';
 import { SettingsPanelSeparator } from './components/settings/SettingsPanelSeparator';
 import { PlayerInfoSettingsPanelPage } from './components/settings/PlayerInfoSettingsPanelPage';
+import { PlayerInsightsPanel } from './components/panels/player-insights/PlayerInsightsPanel';
 
 /**
  * Provides factory methods to create Bitmovin provided UIs.
@@ -250,9 +252,15 @@ export namespace UIFactory {
 
     export function main(config: UIConfig = {}): UIContainer {
       const subtitleOverlay = new SubtitleOverlay();
-      const playerContextMenu = BrowserUtils.isMobile ? null : new PlayerContextMenu();
+      const playerInsightsPanel = new PlayerInsightsPanel({ hidden: true });
+      const playerContextMenu = BrowserUtils.isMobile ? null : buildPlayerContextMenu(playerInsightsPanel);
 
-      const settingsPanel = buildDefaultSettingsPanel(subtitleOverlay, undefined, config.ecoMode === true);
+      const settingsPanel = buildDefaultSettingsPanel(
+        subtitleOverlay,
+        undefined,
+        config.ecoMode === true,
+        playerInsightsPanel,
+      );
       const controlBar = new ControlBar({
         components: [
           new Container({
@@ -289,6 +297,8 @@ export namespace UIFactory {
 
       const conditionalComponents = [
         config.includeWatermark ? new Watermark() : null,
+        new DismissClickOverlay({ target: playerInsightsPanel, hidden: true }),
+        playerInsightsPanel,
         playerContextMenu ? new DismissClickOverlay({ target: playerContextMenu }) : null,
         playerContextMenu,
       ].filter(e => e);
@@ -370,9 +380,10 @@ export namespace UIFactory {
 
     export function smallScreen(): UIContainer {
       const subtitleOverlay = new SubtitleOverlay();
-      const playerContextMenu = BrowserUtils.isMobile ? null : new PlayerContextMenu();
+      const playerInsightsPanel = new PlayerInsightsPanel({ hidden: true });
+      const playerContextMenu = BrowserUtils.isMobile ? null : buildPlayerContextMenu(playerInsightsPanel);
 
-      const settingsPanel = buildDefaultSettingsPanel(subtitleOverlay, -1);
+      const settingsPanel = buildDefaultSettingsPanel(subtitleOverlay, -1, false, playerInsightsPanel);
 
       const controlBar = new ControlBar({
         components: [
@@ -428,6 +439,8 @@ export namespace UIFactory {
               }),
             ],
           }),
+          new DismissClickOverlay({ target: playerInsightsPanel, hidden: true }),
+          playerInsightsPanel,
           new DismissClickOverlay({ target: settingsPanel }),
           settingsPanel,
           ...(playerContextMenu ? [new DismissClickOverlay({ target: playerContextMenu }), playerContextMenu] : []),
@@ -711,6 +724,7 @@ export namespace UIFactory {
     subtitleOverlay: SubtitleOverlay,
     hideDelay: number | undefined = undefined,
     enableEcoMode: boolean = false,
+    playerInsightsPanel?: PlayerInsightsPanel,
   ): SettingsPanel<SettingsPanelConfig> {
     const settingsPanelConfig: SettingsPanelConfig = {
       components: [],
@@ -787,7 +801,10 @@ export namespace UIFactory {
     settingsPanel.addComponent(subtitleSettingsPanelPage);
 
     if (BrowserUtils.isMobile) {
-      const moreSettingsPanelPage = new PlayerInfoSettingsPanelPage({ settingsPanel });
+      const moreSettingsPanelPage = new PlayerInfoSettingsPanelPage({
+        settingsPanel,
+        components: playerInsightsPanel ? [playerInsightsPanel.createSettingsPanelToggleItem(settingsPanel)] : [],
+      });
       mainSettingsPanelPage.addComponent(new SettingsPanelSeparator());
       mainSettingsPanelPage.addComponent(
         new SettingsPanelPageNavigationItem({
@@ -800,5 +817,34 @@ export namespace UIFactory {
     }
 
     return settingsPanel;
+  }
+
+  function buildPlayerContextMenu(playerInsightsPanel: PlayerInsightsPanel): PlayerContextMenu {
+    const playerInsightsContextMenuItem = new ContextMenuItem<ContextMenuItemConfig>({
+      text: playerInsightsPanel.getConfig().hidden
+        ? i18n.getLocalizer('playerInsights.show')
+        : i18n.getLocalizer('playerInsights.hide'),
+    });
+    const playerContextMenu = new PlayerContextMenu({
+      components: [playerInsightsContextMenuItem],
+    });
+
+    const updatePlayerInsightsContextMenuItemText = () => {
+      const text = playerInsightsPanel.isShown()
+        ? i18n.getLocalizer('playerInsights.hide')
+        : i18n.getLocalizer('playerInsights.show');
+
+      playerInsightsContextMenuItem.setText(text);
+      playerInsightsContextMenuItem.setAriaLabel(text);
+    };
+
+    playerInsightsContextMenuItem.onClick.subscribe(() => {
+      playerInsightsPanel.toggleHidden();
+      playerContextMenu.hide();
+    });
+    playerInsightsPanel.onShow.subscribe(updatePlayerInsightsContextMenuItemText);
+    playerInsightsPanel.onHide.subscribe(updatePlayerInsightsContextMenuItemText);
+
+    return playerContextMenu;
   }
 }
