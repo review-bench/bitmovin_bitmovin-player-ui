@@ -56,6 +56,9 @@ import { AdMessageLabel } from './components/ads/AdMessageLabel';
 import { FocusableContainer } from './spatialnavigation/FocusableContainer';
 import { BrowserUtils } from './utils/BrowserUtils';
 import { RecommendationOverlayNavigationGroup } from './spatialnavigation/RecommendationOverlayNavigationGroup';
+import { SettingsPanelPageNavigationItem } from './components/settings/SettingsPanelPageNavigationItem';
+import { SettingsPanelSeparator } from './components/settings/SettingsPanelSeparator';
+import { PlayerInfoSettingsPanelPage } from './components/settings/PlayerInfoSettingsPanelPage';
 
 /**
  * Provides factory methods to create Bitmovin provided UIs.
@@ -782,6 +785,19 @@ export namespace UIFactory {
     });
     mainSettingsPanelPage.addComponent(subtitleSelectItem);
     settingsPanel.addComponent(subtitleSettingsPanelPage);
+
+    if (BrowserUtils.isMobile) {
+      const moreSettingsPanelPage = new PlayerInfoSettingsPanelPage({ settingsPanel });
+      mainSettingsPanelPage.addComponent(new SettingsPanelSeparator());
+      mainSettingsPanelPage.addComponent(
+        new SettingsPanelPageNavigationItem({
+          label: i18n.getLocalizer('settings.more'),
+          container: settingsPanel,
+          targetPage: moreSettingsPanelPage,
+        }),
+      );
+      settingsPanel.addComponent(moreSettingsPanelPage);
+    }
 
     return settingsPanel;
   }
