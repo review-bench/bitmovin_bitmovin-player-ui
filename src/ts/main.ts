@@ -158,6 +158,10 @@ export {
   SettingsPanelPageNavigatorButton,
   SettingsPanelPageNavigatorConfig,
 } from './components/settings/SettingsPanelPageNavigatorButton';
+export {
+  SettingsPanelPageNavigationItem,
+  SettingsPanelPageNavigationItemConfig,
+} from './components/settings/SettingsPanelPageNavigationItem';
 export { SettingsPanelSeparator, SettingsPanelSeparatorConfig } from './components/settings/SettingsPanelSeparator';
 export { InteractiveSettingsPanelItem } from './components/settings/InteractiveSettingsPanelItem';
 export { TouchControlOverlay, TouchControlOverlayConfig } from './components/overlays/TouchControlOverlay';
