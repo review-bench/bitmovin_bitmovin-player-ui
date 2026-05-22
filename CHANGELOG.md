@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 
 - Desktop UI layouts show a player context menu with Bitmovin Player and UI version information
+- New `SettingsPanelPageNavigationItem` component to simplify navigating to a different `SettingsPanelPage`
 
 ### Fixed
 
